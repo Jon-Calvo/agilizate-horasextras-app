@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Solicitudes - AGILIZATE</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+  <div class="app-container">
+    <nav class="navbar">
+      <div class="navbar-brand"><h1>AGILIZATE</h1></div>
+      <div class="navbar-user">
+        <span id="user-name"></span>
+        <button id="logout-btn" class="btn btn-sm">Salir</button>
+      </div>
+    </nav>
+    
+    <div class="sidebar">
+      <ul class="sidebar-menu">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="solicitudes.html" class="active">Mis Solicitudes</a></li>
+        <li><a href="crear-solicitud.html">Nueva Solicitud</a></li>
+        <li><a href="aprobar.html">Aprobar</a></li>
+      </ul>
+    </div>
+    
+    <main class="main-content">
+      <h2>Mis Solicitudes</h2>
+      
+      <div id="loading" class="loading" style="display:none;">Cargando...</div>
+      
+      <table id="tabla-solicitudes" class="table">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Fecha</th>
+            <th>Colaboradores</th>
+            <th>Horas</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </main>
+  </div>
+  
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    async function loadSolicitudes() {
+      document.getElementById('loading').style.display = 'block';
+      const result = await API.getSolicitudes();
+      document.getElementById('loading').style.display = 'none';
+      
+      if (result.ok) {
+        const tbody = document.querySelector('#tabla-solicitudes tbody');
+        tbody.innerHTML = '';
+        
+        // Agrupar por número de solicitud
+        const grupos = {};
+        result.data.forEach(sol => {
+          if (!grupos[sol.NumeroSolicitud]) {
+            grupos[sol.NumeroSolicitud] = [];
+          }
+          grupos[sol.NumeroSolicitud].push(sol);
+        });
+        
+        Object.entries(grupos).forEach(([num, sols]) => {
+          const tr = document.createElement('tr');
+          const totalHoras = sols.reduce((sum, s) => sum + parseFloat(s.CantidadHoras || 0), 0);
+          
+          tr.innerHTML = `
+            <td>${num}</td>
+            <td>${sols[0].FechaInicioExtra}</td>
+            <td>${sols.length}</td>
+            <td>${totalHoras.toFixed(2)} hs</td>
+            <td><span class="badge badge-${getStatusClass(sols[0].StatusSolicitud)}">${sols[0].StatusSolicitud}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+    
+    function getStatusClass(status) {
+      if (status === 'APROBADA') return 'success';
+      if (status === 'RECHAZADA') return 'danger';
+      return 'warning';
+    }
+    
+    if (Auth.isLoggedIn()) {
+      loadSolicitudes();
+    } else {
+      window.location.href = '../index.html';
+    }
+  </script>
+  
+  <style>
+    .table {
+      width: 100%;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .table th, .table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .table th {
+      background: var(--gray-50);
+      font-weight: 600;
+    }
+    .badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+  </style>
+</body>
+</html>
