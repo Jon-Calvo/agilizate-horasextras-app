@@ -2,14 +2,16 @@ class API {
   static async call(action, params = {}) {
     const token = localStorage.getItem(CONFIG.STORAGE_KEYS.TOKEN);
     const payload = { action, token, ...params };
-    
+  
     try {
-      const response = await fetch(CONFIG.API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const url = CONFIG.API_URL + '?payload=' + encodeURIComponent(JSON.stringify(payload));
+      
+      const response = await fetch(url, {
+        method: 'GET'
       });
+  
       return await response.json();
+      
     } catch (error) {
       console.error('API Error:', error);
       return { ok: false, error: 'Error de conexión con el servidor' };
