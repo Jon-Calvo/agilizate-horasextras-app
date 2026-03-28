@@ -1,3 +1,5 @@
+//console.log("API cargada correctamente");
+
 class API {
   static call(action, params = {}) {
     return new Promise((resolve, reject) => {
@@ -70,3 +72,5 @@ class API {
   }
 }
 
+//Esto garantiza que API exista en todo el sistema (const API = { ... },  Pero en algunos casos (GitHub + navegador), eso NO queda en el scope global)
+window.API = API;
