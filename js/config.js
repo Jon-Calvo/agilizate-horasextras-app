@@ -1,5 +1,5 @@
 const CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbw18qHMP-8Akji8oW2Kr0SZRo6ah7Cm9hoFU7po8InB5gJ3a9EvydnPABUjBls834I7/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwZq4qvwB0UHkNqWS1wWnYe5i_DARXgi4DCNshX704YRV37IqDkx10qmZNzDfqkXzHe/exec',
   APP_NAME: 'AGILIZATE',
   VERSION: '1.0.0',
   STORAGE_KEYS: {
