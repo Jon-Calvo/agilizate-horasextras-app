@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portería - AGILIZATE</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+  <div class="app-container">
+    <nav class="navbar">
+      <button class="menu-toggle" id="menu-toggle">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="navbar-brand"><h1>AGILIZATE</h1></div>
+      <div class="navbar-user">
+        <span id="user-name"></span>
+        <button id="logout-btn" class="btn btn-sm btn-secondary">Salir</button>
+      </div>
+    </nav>
+    
+    <div class="sidebar" id="sidebar">
+      <ul class="sidebar-menu">
+        <li><a href="porteria.html" class="active">🚪 Control de Ingreso</a></li>
+        <li><a href="dashboard.html">📊 Dashboard</a></li>
+      </ul>
+    </div>
+    
+    <main class="main-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2>Control de Ingreso - Hoy</h2>
+        <button class="btn btn-primary btn-sm" onclick="loadHoy()">🔄 Actualizar</button>
+      </div>
+      
+      <div class="dashboard-cards" style="margin-bottom: 24px;">
+        <div class="card">
+          <h3>Aprobadas Hoy</h3>
+          <p class="metric" id="total-hoy">-</p>
+        </div>
+        <div class="card">
+          <h3>Ingresaron</h3>
+          <p class="metric success" id="total-ingresaron">-</p>
+        </div>
+        <div class="card">
+          <h3>Pendientes</h3>
+          <p class="metric warning" id="total-pendientes">-</p>
+        </div>
+      </div>
+      
+      <div id="loading" class="loading" style="display:none;">
+        <div class="spinner"></div>
+      </div>
+      
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>N° Sol.</th>
+              <th>Colaborador</th>
+              <th>Legajo</th>
+              <th>Sector</th>
+              <th>Hora Programada</th>
+              <th>Ingreso</th>
+              <th>Hora Real</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-ingresos"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Modal Registrar Ingreso -->
+  <div id="modal-ingreso" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Registrar Ingreso</h3>
+        <button class="modal-close" onclick="cerrarModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="info-colaborador"></div>
+        <div class="form-group">
+          <label>Hora de Ingreso Real</label>
+          <input type="time" id="hora-ingreso-real" required>
+        </div>
+        <div class="form-group">
+          <label>Observaciones</label>
+          <textarea id="obs-ingreso" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn btn-success" onclick="confirmarIngreso()">✅ Registrar</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    let registroActual = null;
+    
+    async function loadHoy() {
+      document.getElementById('loading').style.display = 'flex';
+      const result = await API.call('getSolicitudesPorteria');
+      document.getElementById('loading').style.display = 'none';
+      
+      if (result.ok) {
+        mostrarIngresos(result.data);
+      }
+    }
+    
+    function mostrarIngresos(solicitudes) {
+      const tbody = document.getElementById('tabla-ingresos');
+      const total = solicitudes.length;
+      const ingresaron = solicitudes.filter(s => s.RegistroIngreso).length;
+      const pendientes = total - ingresaron;
+      
+      document.getElementById('total-hoy').textContent = total;
+      document.getElementById('total-ingresaron').textContent = ingresaron;
+      document.getElementById('total-pendientes').textContent = pendientes;
+      
+      tbody.innerHTML = solicitudes.map(s => `
+        <tr>
+          <td>${s.NumeroSolicitud}</td>
+          <td>${s.NombreColaborador}</td>
+          <td>${s.Legajo}</td>
+          <td>${s.SectorExtraID}</td>
+          <td>${s.HoraInicioExtra}</td>
+          <td>
+            ${s.RegistroIngreso ? 
+              '<span class="badge badge-success">✓ SÍ</span>' : 
+              '<span class="badge badge-warning">Pendiente</span>'
+            }
+          </td>
+          <td>${s.HoraIngresoReal || '-'}</td>
+          <td>
+            ${!s.RegistroIngreso ? 
+              `<button class="btn btn-primary btn-sm" onclick='abrirModalIngreso(${JSON.stringify(s)})'>
+                Registrar
+              </button>` : 
+              '<span class="badge badge-gray">Registrado</span>'
+            }
+          </td>
+        </tr>
+      `).join('');
+    }
+    
+    function abrirModalIngreso(sol) {
+      registroActual = sol;
+      
+      const ahora = new Date();
+      const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + 
+                        String(ahora.getMinutes()).padStart(2, '0');
+      
+      document.getElementById('hora-ingreso-real').value = horaActual;
+      document.getElementById('info-colaborador').innerHTML = `
+        <div class="alert alert-info">
+          <strong>${sol.NombreColaborador}</strong> (Legajo: ${sol.Legajo})<br>
+          Solicitud N° ${sol.NumeroSolicitud}<br>
+          Hora programada: ${sol.HoraInicioExtra}
+        </div>
+      `;
+      
+      document.getElementById('modal-ingreso').style.display = 'flex';
+    }
+    
+    async function confirmarIngreso() {
+      const horaReal = document.getElementById('hora-ingreso-real').value;
+      
+      if (!horaReal) {
+        alert('Debe ingresar la hora');
+        return;
+      }
+      
+      const result = await API.call('registrarIngreso', {
+        numeroSolicitud: registroActual.NumeroSolicitud,
+        legajo: registroActual.Legajo,
+        horaIngreso: horaReal
+      });
+      
+      if (result.ok) {
+        alert('✅ Ingreso registrado');
+        cerrarModal();
+        loadHoy();
+      } else {
+        alert('Error: ' + result.error);
+      }
+    }
+    
+    function cerrarModal() {
+      document.getElementById('modal-ingreso').style.display = 'none';
+      document.getElementById('obs-ingreso').value = '';
+    }
+    
+    document.getElementById('menu-toggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('active');
+    });
+    
+    if (Auth.isLoggedIn()) {
+      loadHoy();
+    } else {
+      window.location.href = '../index.html';
+    }
+  </script>
+</body>
+</html>

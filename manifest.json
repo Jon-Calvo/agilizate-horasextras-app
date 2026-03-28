@@ -1,0 +1,16 @@
+{
+  "name": "AGILIZATE",
+  "short_name": "AGILIZATE",
+  "description": "Sistema de Gestión de Horas Extras",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1f44",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

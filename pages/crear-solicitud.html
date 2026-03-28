@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nueva Solicitud - AGILIZATE</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+  <div class="app-container">
+    <nav class="navbar">
+      <div class="navbar-brand"><h1>AGILIZATE</h1></div>
+      <div class="navbar-user">
+        <span id="user-name"></span>
+        <button id="logout-btn" class="btn btn-sm">Salir</button>
+      </div>
+    </nav>
+    
+    <div class="sidebar">
+      <ul class="sidebar-menu">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="solicitudes.html">Mis Solicitudes</a></li>
+        <li><a href="crear-solicitud.html" class="active">Nueva Solicitud</a></li>
+      </ul>
+    </div>
+    
+    <main class="main-content">
+      <h2>Nueva Solicitud de Horas Extras</h2>
+      
+      <form id="form-solicitud" class="form-solicitud">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Motivo *</label>
+            <select id="motivo" required></select>
+          </div>
+          <div class="form-group">
+            <label>Sector *</label>
+            <select id="sector" required></select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha Realización *</label>
+            <input type="date" id="fechaInicio" required>
+          </div>
+          <div class="form-group">
+            <label>Hora Inicio *</label>
+            <input type="time" id="horaInicio" required>
+          </div>
+          <div class="form-group">
+            <label>Hora Fin *</label>
+            <input type="time" id="horaFin" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Observaciones</label>
+          <textarea id="observacion" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Colaboradores *</label>
+          <input type="text" id="buscar-colab" placeholder="Buscar por nombre o legajo...">
+          <div id="resultados-colab"></div>
+          <div id="colaboradores-seleccionados"></div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Crear Solicitud</button>
+      </form>
+    </main>
+  </div>
+  
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    let colaboradoresSeleccionados = [];
+    let referencias = null;
+    
+    async function loadReferencias() {
+      const result = await API.getReferencias();
+      if (result.ok) {
+        referencias = result.data;
+        
+        // Llenar select de motivos
+        const selectMotivo = document.getElementById('motivo');
+        referencias.motivos.forEach(m => {
+          const option = document.createElement('option');
+          option.value = m.IDMotivo;
+          option.textContent = m.MotivoExtra;
+          option.dataset.tipo = m.TipoExtra;
+          selectMotivo.appendChild(option);
+        });
+        
+        // Llenar select de sectores
+        const selectSector = document.getElementById('sector');
+        referencias.sectores.forEach(s => {
+          const option = document.createElement('option');
+          option.value = s.IDSector;
+          option.textContent = s.Sector;
+          selectSector.appendChild(option);
+        });
+      }
+    }
+    
+    // Buscar colaboradores
+    let timeoutBusqueda;
+    document.getElementById('buscar-colab').addEventListener('input', (e) => {
+      clearTimeout(timeoutBusqueda);
+      timeoutBusqueda = setTimeout(async () => {
+        const query = e.target.value;
+        if (query.length < 2) return;
+        
+        const result = await API.getColaboradores(query);
+        if (result.ok) {
+          mostrarResultados(result.data);
+        }
+      }, 300);
+    });
+    
+    function mostrarResultados(colaboradores) {
+      const div = document.getElementById('resultados-colab');
+      div.innerHTML = '';
+      
+      colaboradores.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'resultado-item';
+        item.innerHTML = `${c.ApellidoNombre} (${c.Legajo}) - IB: ${c.IB_Actual}`;
+        item.onclick = () => agregarColaborador(c);
+        div.appendChild(item);
+      });
+    }
+    
+    function agregarColaborador(colab) {
+      if (colaboradoresSeleccionados.find(c => c.legajo === colab.Legajo)) return;
+      
+      colaboradoresSeleccionados.push({
+        legajo: colab.Legajo,
+        nombre: colab.ApellidoNombre,
+        ib: colab.IB_Actual,
+        categoria: colab.CategoriaID
+      });
+      
+      actualizarListaSeleccionados();
+      document.getElementById('resultados-colab').innerHTML = '';
+      document.getElementById('buscar-colab').value = '';
+    }
+    
+    function actualizarListaSeleccionados() {
+      const div = document.getElementById('colaboradores-seleccionados');
+      div.innerHTML = colaboradoresSeleccionados.map((c, i) => `
+        <div class="colab-tag">
+          ${c.nombre} (${c.legajo})
+          <button type="button" onclick="eliminarColaborador(${i})">×</button>
+        </div>
+      `).join('');
+    }
+    
+    function eliminarColaborador(index) {
+      colaboradoresSeleccionados.splice(index, 1);
+      actualizarListaSeleccionados();
+    }
+    
+    document.getElementById('form-solicitud').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (colaboradoresSeleccionados.length === 0) {
+        alert('Debe seleccionar al menos un colaborador');
+        return;
+      }
+      
+      const motivoSelect = document.getElementById('motivo');
+      const motivoOption = motivoSelect.options[motivoSelect.selectedIndex];
+      
+      const solicitud = {
+        motivoID: document.getElementById('motivo').value,
+        tipoExtra: motivoOption.dataset.tipo,
+        sectorExtraID: document.getElementById('sector').value,
+        areaExtraID: 'produccion',
+        fechaInicio: document.getElementById('fechaInicio').value,
+        horaInicio: document.getElementById('horaInicio').value,
+        horaFin: document.getElementById('horaFin').value,
+        observacion: document.getElementById('observacion').value,
+        colaboradores: colaboradoresSeleccionados
+      };
+      
+      const result = await API.crearSolicitud(solicitud);
+      
+      if (result.ok) {
+        alert(`Solicitud N°${result.numeroSolicitud} creada exitosamente`);
+        window.location.href = 'solicitudes.html';
+      } else {
+        alert('Error: ' + result.error);
+      }
+    });
+    
+    if (Auth.isLoggedIn()) {
+      loadReferencias();
+    } else {
+      window.location.href = '../index.html';
+    }
+  </script>
+  
+  <style>
+    .form-solicitud { background: white; padding: 24px; border-radius: 12px; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--gray-200);
+      border-radius: 8px;
+    }
+    .resultado-item {
+      padding: 12px;
+      background: var(--gray-50);
+      margin-bottom: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .resultado-item:hover { background: var(--gray-100); }
+    .colab-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--primary-light);
+      color: white;
+      border-radius: 20px;
+      margin: 4px;
+    }
+    .colab-tag button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+    }
+  </style>
+</body>
+</html>
