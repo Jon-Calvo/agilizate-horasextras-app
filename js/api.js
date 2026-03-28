@@ -6,48 +6,48 @@
 class API {
   
   /**
-   * Método genérico para llamar al backend
+   * Método genérico para llamar al backend (Usar JSONP en el frontend)
    */
-  static async call(action, params = {}) {
-    const token = localStorage.getItem(CONFIG.STORAGE_KEYS.TOKEN);
-    
-    const payload = {
-      action: action,
-      token: token,
-      ...params
-    };
-    
-    try {
-      const response = await fetch(CONFIG.API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload),
-        mode: 'cors'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error de red: ' + response.status);
-      }
-      
-      const result = await response.json();
-      
-      // Si el token expiró, redirigir a login
-      if (!result.ok && result.error && result.error.includes('expirad')) {
-        Auth.logout();
-        return result;
-      }
-      
-      return result;
-      
-    } catch (error) {
-      console.error('API Error:', error);
-      return { 
-        ok: false, 
-        error: 'Error de conexión con el servidor. Verifique su conexión.' 
+  static call(action, params = {}) {
+    return new Promise((resolve, reject) => {
+      const token = localStorage.getItem(CONFIG.STORAGE_KEYS.TOKEN);
+  
+      const payload = {
+        action,
+        token,
+        ...params
       };
-    }
+  
+      const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+  
+      // Crear función global
+      window[callbackName] = function(response) {
+        delete window[callbackName];
+        script.remove();
+  
+        // Manejo de sesión expirada
+        if (!response.ok && response.error && response.error.includes('expirad')) {
+          Auth.logout();
+        }
+  
+        resolve(response);
+      };
+  
+      const url = CONFIG.API_URL
+        + '?callback=' + callbackName
+        + '&payload=' + encodeURIComponent(JSON.stringify(payload));
+  
+      const script = document.createElement('script');
+      script.src = url;
+  
+      script.onerror = () => {
+        delete window[callbackName];
+        script.remove();
+        reject(new Error('Error de red'));
+      };
+  
+      document.body.appendChild(script);
+    });
   }
   
   // ——— AUTENTICACIÓN ————————————————————————————————————————
