@@ -77,3 +77,9 @@ const Permisos = {
       .map(([k]) => k);
   },
 };
+
+//Agregado
+window.Permisos = {
+  listar: () => [],
+  tienePermiso: () => true
+};
