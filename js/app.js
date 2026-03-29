@@ -11,19 +11,37 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Inicializar módulos
-  await Promise.all([
-    Solicitudes.init(),
-    Aprobaciones.init(),
-    Porteria.init(),
-    Dashboard.init(),
-    Usuarios.init(),
-    Configuracion.init(),
-    Nomina.init(),
-    Reportes.init(),
-    Logs.init(),
-    Excel.init(),
-  ]);
-
+//  await Promise.all([
+//    Solicitudes.init(),
+//    Aprobaciones.init(),
+//    Porteria.init(),
+//    Dashboard.init(),
+//    Usuarios.init(),
+//    Configuracion.init(),
+//    Nomina.init(),
+//    Reportes.init(),
+//    Logs.init(),
+//    Excel.init(),
+//  ]);
+   const modulos = [
+     window.Solicitudes,
+     window.Aprobaciones,
+     window.Porteria,
+     window.Dashboard,
+     window.Usuarios,
+     window.Configuracion,
+     window.Nomina,
+     window.Reportes,
+     window.Logs,
+     window.Excel,
+   ];
+   
+   await Promise.all(
+     modulos
+       .filter(m => m && typeof m.init === 'function')
+       .map(m => m.init())
+   );
+   
   // Registrar sección de perfil
   UI.registerSection('profile', () => renderPerfil());
 
