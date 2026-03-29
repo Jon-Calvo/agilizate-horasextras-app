@@ -50,6 +50,11 @@ window.addEventListener('DOMContentLoaded', async () => {
      const content = document.getElementById('appContent');
      content.innerHTML = '<h2>Dashboard 🚀</h2>';
    });
+   window.Dashboard = {
+     init: async () => {
+       UI.registerSection('dashboard', renderDashboard);
+     }
+   };
    
    UI.registerSection('solicitudes', () => {
      const content = document.getElementById('appContent');
