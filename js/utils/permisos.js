@@ -78,8 +78,3 @@ const Permisos = {
   },
 };
 
-//Agregado
-window.Permisos = {
-  listar: () => [],
-  tienePermiso: () => true
-};
