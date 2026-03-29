@@ -1,5 +1,11 @@
 /* ============================================================
-   AGILIZATE – App Initialization (fixed)
+   AGILIZATE – App Initialization  [CORREGIDO v1.1]
+   ============================================================
+   CORRECCIÓN: Se agrega API.markSessionReady() DESPUÉS de que
+   la navegación inicial esté completa. Esto evita que el
+   callback JSONP haga logout automático durante el primer
+   render, cuando el CacheService de Apps Script puede tener
+   latencia y devolver "token inválido" falsamente.
    ============================================================ */
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -11,24 +17,20 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   // 2. Registrar todas las secciones en UI
-  // Cada módulo tiene un método render() que es llamado al navegar
   _registrarSecciones();
 
-  // 3. Registrar sección perfil (inline, no necesita módulo propio)
+  // 3. Registrar sección perfil (inline)
   UI.registerSection('profile', function () { _renderPerfil(); });
 
-  // 4. Inicializar catálogos compartidos en los módulos que los necesiten
-  // (lo hace cada módulo en su render, no necesitamos pre-cargar aquí)
-
-  // 5. Construir navegación y sidebar
+  // 4. Construir navegación y sidebar
   UI.buildNav();
   UI.initOutsideClicks();
 
-  // 6. Ocultar pantalla de loading inicial
+  // 5. Ocultar pantalla de loading inicial
   const loadingScreen = document.getElementById('loadingScreen');
   if (loadingScreen) loadingScreen.style.display = 'none';
 
-  // 7. Navegar a la sección inicial según el rol del usuario
+  // 6. Navegar a la sección inicial según el rol del usuario
   const user = Auth.currentUser;
   let seccionInicial = 'dashboard';
 
@@ -46,13 +48,18 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   UI.showSection(seccionInicial);
+
+  // 7. CRÍTICO: Marcar la sesión como lista DESPUÉS del primer render.
+  //    A partir de este punto, un error de token en la API sí hará logout.
+  //    Usamos un pequeño delay para que el primer render JSONP no sufra
+  //    falsos positivos por latencia del CacheService de Apps Script.
+  setTimeout(() => {
+    API.markSessionReady();
+  }, 3000);
 });
 
 // ── Registro centralizado de secciones ──────────────────────
 function _registrarSecciones() {
-  // Cada módulo expone un método render() que dibuja el contenido
-  // El init() ya no existe — registrar directamente
-
   UI.registerSection('dashboard',    function (p) { return Dashboard.render(p); });
   UI.registerSection('solicitudes',  function (p) { return Solicitudes.render(p); });
   UI.registerSection('aprobaciones', function (p) { return Aprobaciones.render(p); });
