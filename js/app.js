@@ -11,91 +11,28 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Inicializar módulos
-//  await Promise.all([
-//    Solicitudes.init(),
-//    Aprobaciones.init(),
-//    Porteria.init(),
-//    Dashboard.init(),
-//    Usuarios.init(),
-//    Configuracion.init(),
-//    Nomina.init(),
-//    Reportes.init(),
-//    Logs.init(),
-//    Excel.init(),
-//  ]);
-   const modulos = [
-     window.Solicitudes,
-     window.Aprobaciones,
-     window.Porteria,
-     window.Dashboard,
-     window.Usuarios,
-     window.Configuracion,
-     window.Nomina,
-     window.Reportes,
-     window.Logs,
-     window.Excel,
-   ];
-   
-   await Promise.all(
-     modulos
-       .filter(m => m && typeof m.init === 'function')
-       .map(m => m.init())
-   );
-   
+  const modulos = [
+    Solicitudes,
+    Aprobaciones,
+    Porteria,
+    Dashboard,
+    Usuarios,
+    Configuracion,
+    Nomina,
+    Reportes,
+    Logs,
+    Excel,
+  ];
+  
+  await Promise.all(
+    modulos
+      .filter(m => m && typeof m.init === 'function')
+      .map(m => m.init())
+  );
+  
   // Registrar sección de perfil
   UI.registerSection('profile', () => renderPerfil());
 
-   // Registrar secciones básicas (fallback)
-   //UI.registerSection('dashboard', () => {
-   //  const content = document.getElementById('appContent');
-   //  content.innerHTML = '<h2>Dashboard 🚀</h2>';
-   //});
-   
-   UI.registerSection('solicitudes', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Solicitudes</h2>';
-   });
-   
-   UI.registerSection('aprobaciones', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Aprobaciones</h2>';
-   });
-   
-   UI.registerSection('porteria', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Portería</h2>';
-   });
-   
-   UI.registerSection('usuarios', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Usuarios</h2>';
-   });
-   
-   UI.registerSection('configuracion', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Configuración</h2>';
-   });
-   
-   UI.registerSection('nomina', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Nómina</h2>';
-   });
-   
-   UI.registerSection('reportes', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Reportes</h2>';
-   });
-   
-   UI.registerSection('logs', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Auditoría / Logs</h2>';
-   });
-   
-   UI.registerSection('excel', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Excel</h2>';
-   });
-   
   // Construir navegación
   UI.buildNav();
   UI.initOutsideClicks();
