@@ -11,19 +11,31 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Inicializar módulos
-  const modulos = [
-    Solicitudes,
-    Aprobaciones,
-    Porteria,
-    Dashboard,
-    Usuarios,
-    Configuracion,
-    Nomina,
-    Reportes,
-    Logs,
-    Excel,
-  ];
-  
+//  const modulos = [
+//    Solicitudes,
+//    Aprobaciones,
+//    Porteria,
+//    Dashboard,
+//    Usuarios,
+//    Configuracion,
+//    Nomina,
+//    Reportes,
+//    Logs,
+//    Excel,
+//  ];
+   const modulos = [
+     window.Solicitudes,
+     window.Aprobaciones,
+     window.Porteria,
+     window.Dashboard,
+     window.Usuarios,
+     window.Configuracion,
+     window.Nomina,
+     window.Reportes,
+     window.Logs,
+     window.Excel,
+   ];
+   
   await Promise.all(
     modulos
       .filter(m => m && typeof m.init === 'function')
