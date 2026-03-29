@@ -9,32 +9,17 @@ const Dashboard = {
   _motivos: [],
   _tipoCambio: [],
 
-  //async init() {
-  //  UI.registerSection('dashboard', () => Dashboard.render());
-  //},
-
-   //Agregado
-   window.Dashboard = {
-     init: async () => {
-       UI.registerSection('dashboard', renderDashboard);
-     }
-   };
+/** Inicializa el módulo registrándolo en el sistema de UI */
+  async init() {
+    UI.registerSection('dashboard', (params) => Dashboard.render(params));
+  },
    
-   function renderDashboard() {
-     const content = document.getElementById('appContent');
-   
-     content.innerHTML = `
-       <h2>Dashboard</h2>
-       <p>Acá va tu dashboard real 🔥</p>
-     `;
-   }
-
 
   async render() {
     const content = document.getElementById('appContent');
     if (!content) return;
 
-    // Cargar catálogos
+    // Cargar catálogos iniciales
     const [areasRes, motivosRes, tcRes] = await Promise.all([
       API.getAreas(), API.getMotivos(), API.getTipoCambio()
     ]);
