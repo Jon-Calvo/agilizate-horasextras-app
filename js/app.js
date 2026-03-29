@@ -46,10 +46,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   UI.registerSection('profile', () => renderPerfil());
 
    // Registrar secciones básicas (fallback)
-   UI.registerSection('dashboard', () => {
-     const content = document.getElementById('appContent');
-     content.innerHTML = '<h2>Dashboard 🚀</h2>';
-   });
+   //UI.registerSection('dashboard', () => {
+   //  const content = document.getElementById('appContent');
+   //  content.innerHTML = '<h2>Dashboard 🚀</h2>';
+   //});
    
    UI.registerSection('solicitudes', () => {
      const content = document.getElementById('appContent');
