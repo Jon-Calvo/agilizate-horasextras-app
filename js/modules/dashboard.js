@@ -9,9 +9,26 @@ const Dashboard = {
   _motivos: [],
   _tipoCambio: [],
 
-  async init() {
-    UI.registerSection('dashboard', () => Dashboard.render());
-  },
+  //async init() {
+  //  UI.registerSection('dashboard', () => Dashboard.render());
+  //},
+
+   //Agregado
+   window.Dashboard = {
+     init: async () => {
+       UI.registerSection('dashboard', renderDashboard);
+     }
+   };
+   
+   function renderDashboard() {
+     const content = document.getElementById('appContent');
+   
+     content.innerHTML = `
+       <h2>Dashboard</h2>
+       <p>Acá va tu dashboard real 🔥</p>
+     `;
+   }
+
 
   async render() {
     const content = document.getElementById('appContent');
