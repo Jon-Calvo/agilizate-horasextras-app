@@ -9,26 +9,9 @@ const Dashboard = {
   _motivos: [],
   _tipoCambio: [],
 
-  //async init() {
-  //  UI.registerSection('dashboard', () => Dashboard.render());
-  //},
-
-   //Agregado
-   window.Dashboard = {
-     init: async () => {
-       UI.registerSection('dashboard', renderDashboard);
-     }
-   };
-   
-   function renderDashboard() {
-     const content = document.getElementById('appContent');
-   
-     content.innerHTML = `
-       <h2>Dashboard</h2>
-       <p>Acá va tu dashboard real 🔥</p>
-     `;
-   }
-
+  async init() {
+    UI.registerSection('dashboard', () => Dashboard.render());
+  },
 
   async render() {
     const content = document.getElementById('appContent');
@@ -36,11 +19,13 @@ const Dashboard = {
 
     // Cargar catálogos
     const [areasRes, motivosRes, tcRes] = await Promise.all([
-      API.getAreas(), API.getMotivos(), API.getTipoCambio()
+      API.getAreas(), 
+      API.getMotivos(), 
+      API.getTipoCambio()
     ]);
-    this._areas     = areasRes?.data  || [];
-    this._motivos   = motivosRes?.data || [];
-    this._tipoCambio = tcRes?.data    || [];
+    this._areas = areasRes?.data || [];
+    this._motivos = motivosRes?.data || [];
+    this._tipoCambio = tcRes?.data || [];
 
     content.innerHTML = this._buildHTML();
     this._initFiltros();
@@ -49,7 +34,7 @@ const Dashboard = {
 
   _buildHTML() {
     const areasUnicas = [...new Map(this._areas.map(a => [a.Area, a])).values()];
-    const canExport   = Permisos.puedeExportarDashboard();
+    const canExport = Permisos.puedeExportarDashboard();
 
     return `
       <div class="section-header">
@@ -159,7 +144,7 @@ const Dashboard = {
     const areaSelect = document.getElementById('dArea');
     if (areaSelect) {
       areaSelect.addEventListener('change', () => {
-        const area    = areaSelect.value;
+        const area = areaSelect.value;
         const sSelect = document.getElementById('dSector');
         if (!sSelect) return;
         const sectores = this._areas.filter(a => a.Area === area);
@@ -173,10 +158,10 @@ const Dashboard = {
     this._filtros = {
       fechaDesde: document.getElementById('dFechaDesde')?.value,
       fechaHasta: document.getElementById('dFechaHasta')?.value,
-      area:       document.getElementById('dArea')?.value,
-      sector:     document.getElementById('dSector')?.value,
-      motivo:     document.getElementById('dMotivo')?.value,
-      tipoExtra:  document.getElementById('dTipoExtra')?.value,
+      area: document.getElementById('dArea')?.value,
+      sector: document.getElementById('dSector')?.value,
+      motivo: document.getElementById('dMotivo')?.value,
+      tipoExtra: document.getElementById('dTipoExtra')?.value,
       agrupacion: document.getElementById('dAgrupacion')?.value || 'mensual',
     };
     this._loadData();
@@ -186,16 +171,16 @@ const Dashboard = {
     const filtros = {
       fechaDesde: document.getElementById('dFechaDesde')?.value,
       fechaHasta: document.getElementById('dFechaHasta')?.value,
-      area:       document.getElementById('dArea')?.value,
-      sector:     document.getElementById('dSector')?.value,
-      motivo:     document.getElementById('dMotivo')?.value,
-      tipoExtra:  document.getElementById('dTipoExtra')?.value,
+      area: document.getElementById('dArea')?.value,
+      sector: document.getElementById('dSector')?.value,
+      motivo: document.getElementById('dMotivo')?.value,
+      tipoExtra: document.getElementById('dTipoExtra')?.value,
       agrupacion: document.getElementById('dAgrupacion')?.value || 'mensual',
       ...this._filtros,
     };
 
     const res = await API.getDashboardData(filtros);
-    const d   = res?.data || {};
+    const d = res?.data || {};
 
     this._renderStats(d);
     this._renderCharts(d);
@@ -258,8 +243,8 @@ const Dashboard = {
     this._destroyCharts();
 
     const palette = [
-      '#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6',
-      '#06b6d4','#ec4899','#14b8a6','#f97316','#6366f1',
+      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+      '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1',
     ];
 
     // ── Evolución ─────────────────────────────────────────
@@ -412,7 +397,9 @@ const Dashboard = {
     el.innerHTML = `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Colaborador</th><th>Área</th><th>Sector</th><th>Total Horas</th><th>Total ARS</th></tr></thead>
+          <thead>
+            <tr><th>#</th><th>Colaborador</th><th>Área</th><th>Sector</th><th>Total Horas</th><th>Total ARS</th></tr>
+          </thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
