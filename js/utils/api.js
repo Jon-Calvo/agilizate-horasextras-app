@@ -1,8 +1,24 @@
 /* ============================================================
-   AGILIZATE – API via JSONP
+   AGILIZATE – API via JSONP  [CORREGIDO v1.1]
+   ============================================================
+   CORRECCIÓN: El callback JSONP ya no hace logout inmediato
+   ante errores de token. Solo hace logout si la sesión ya
+   estaba inicializada (app cargada). Durante el primer render
+   post-login el CacheService de Apps Script puede tener
+   latencia entre instancias y devolver "token inválido" aunque
+   el token sea válido — esto causaba el loop login→app→login.
    ============================================================ */
 
 const API = {
+
+  // Flag: true una vez que la app está completamente inicializada.
+  // Se setea en app.js después de buildNav() y showSection().
+  _sessionReady: false,
+
+  markSessionReady() {
+    this._sessionReady = true;
+  },
+
   /**
    * Realiza llamadas al backend de Google Apps Script vía JSONP.
    * @param {string} action  - Nombre de la acción/función en el backend
@@ -26,11 +42,24 @@ const API = {
         delete window[callbackName];
         script.remove();
 
-        // Manejo de sesión expirada
-        if (response && !response.ok && response.error &&
-          (response.error.includes('expirad') || response.error.includes('sesion') || response.error.includes('token'))) {
-          Auth.logout();
-          return;
+        // Manejo de sesión expirada:
+        // SOLO hacer logout automático si la sesión ya estaba marcada como ready.
+        // Esto evita el loop causado por latencia del CacheService en el primer render.
+        if (
+          response &&
+          !response.ok &&
+          response.error &&
+          (
+            response.error.includes('expirad') ||
+            response.error.toLowerCase().includes('sesion') ||
+            response.error.toLowerCase().includes('sesión') ||
+            (response.error.includes('token') && API._sessionReady)
+          )
+        ) {
+          if (API._sessionReady) {
+            Auth.logout();
+            return;
+          }
         }
 
         resolve(response);
