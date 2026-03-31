@@ -1,24 +1,38 @@
 /* ============================================================
-   AGILIZATE – Módulo Portería (fixed)
+   AGILIZATE – Módulo Portería  [CORREGIDO v1.2]
+   ============================================================
+   FIXES:
+   5a) Horario en formato hh:mm (en lugar de solo la hora inicio)
+   5b) Filtro por fecha — por defecto hoy, pero editable
    ============================================================ */
 
 const Porteria = {
-  _data: [],
+  _data:       [],
+  _fechaActual: null,   // fecha seleccionada en el filtro
 
   async render() {
     const content = document.getElementById('appContent');
     if (!content) return;
 
+    // Por defecto: hoy
+    if (!this._fechaActual) this._fechaActual = Helpers.today();
+
     content.innerHTML = `
       <div class="section-header">
         <div>
           <h2 class="section-title">Control de Portería</h2>
-          <p class="section-subtitle">Horas extras aprobadas para hoy — ${Helpers.formatDate(Helpers.today())}</p>
+          <p class="section-subtitle" id="porteriaSubtitle">Cargando…</p>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="Porteria.render()">↻ Actualizar</button>
+        <button class="btn btn-ghost btn-sm" onclick="Porteria._cargar()">↻ Actualizar</button>
       </div>
 
       <div class="filter-bar">
+        <!-- FIX 5b: filtro por fecha -->
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="pFecha" value="${this._fechaActual}"
+            onchange="Porteria._onFechaChange()" />
+        </div>
         <div class="form-group" style="flex:2">
           <label>Buscar colaborador / legajo</label>
           <input type="text" id="pSearch" placeholder="Nombre o legajo…" oninput="Porteria._filtrar()" />
@@ -48,21 +62,40 @@ const Porteria = {
     await this._cargar();
   },
 
+  _onFechaChange() {
+    const val = document.getElementById('pFecha')?.value;
+    if (val) {
+      this._fechaActual = val;
+      this._cargar();
+    }
+  },
+
   async _cargar() {
     try {
-      const res   = await API.getAprobadsHoy();
-      this._data  = res?.data || [];
+      // FIX 5b: pasamos la fecha seleccionada al backend
+      const res  = await API.getAprobadsHoy({ fecha: this._fechaActual });
+      this._data = res?.data || [];
+
+      // Actualizar subtítulo con la fecha seleccionada
+      const sub = document.getElementById('porteriaSubtitle');
+      if (sub) {
+        const eHoy = this._fechaActual === Helpers.today();
+        sub.textContent = eHoy
+          ? `Horas extras aprobadas para hoy — ${Helpers.formatDate(this._fechaActual)}`
+          : `Horas extras aprobadas para el ${Helpers.formatDate(this._fechaActual)}`;
+      }
 
       // Cargar áreas en el filtro
       const areas = [...new Set(this._data.map(d => d.AreaExtraID).filter(Boolean))];
       const sel   = document.getElementById('pArea');
-      if (sel && areas.length) {
-        sel.innerHTML = `<option value="">Todas las áreas</option>` +
-          areas.map(a => `<option value="${a}">${a}</option>`).join('');
+      if (sel) {
+        const prevArea = sel.value;
+        sel.innerHTML  = `<option value="">Todas las áreas</option>` +
+          areas.map(a => `<option value="${a}" ${a === prevArea ? 'selected' : ''}>${a}</option>`).join('');
       }
 
       this._renderStats(this._data);
-      this._renderCards(this._data);
+      this._filtrar();
 
     } catch (err) {
       const el = document.getElementById('porteriaContent');
@@ -93,9 +126,9 @@ const Porteria = {
   },
 
   _filtrar() {
-    const search  = (document.getElementById('pSearch')?.value   || '').toLowerCase();
-    const area    = document.getElementById('pArea')?.value      || '';
-    const ingreso = document.getElementById('pIngreso')?.value   || '';
+    const search  = (document.getElementById('pSearch')?.value  || '').toLowerCase();
+    const area    = document.getElementById('pArea')?.value     || '';
+    const ingreso = document.getElementById('pIngreso')?.value  || '';
 
     const filtered = this._data.filter(d => {
       const matchS = !search  || (d.ApellidoNombre || '').toLowerCase().includes(search) || String(d.Legajo).includes(search);
@@ -107,6 +140,17 @@ const Porteria = {
     this._renderCards(filtered);
   },
 
+  // FIX 5a: formatear horario como hh:mm – hh:mm
+  _formatHorario(horaInicio, horaFin) {
+    const fmt = (h) => {
+      if (!h) return '–';
+      // Si ya viene como "HH:mm" o "HH:mm:ss", tomar solo los primeros 5 chars
+      const s = String(h).trim();
+      return s.length >= 5 ? s.substring(0, 5) : s;
+    };
+    return `${fmt(horaInicio)} – ${fmt(horaFin)}`;
+  },
+
   _renderCards(data) {
     const el = document.getElementById('porteriaContent');
     if (!el) return;
@@ -116,7 +160,7 @@ const Porteria = {
         <div class="card" style="padding:3rem;text-align:center">
           <div style="font-size:2.5rem;margin-bottom:.75rem">🏠</div>
           <h4>Sin colaboradores para mostrar</h4>
-          <p style="color:var(--c-gray-500)">No hay horas extras aprobadas para hoy o no coinciden con los filtros.</p>
+          <p style="color:var(--c-gray-500)">No hay horas extras aprobadas para esta fecha o no coinciden con los filtros.</p>
         </div>`;
       return;
     }
@@ -125,8 +169,15 @@ const Porteria = {
 
     const cards = data.map(d => {
       const ingresado = d.RegistroIngreso === 'SI';
+
+      // FIX 5a: horario completo en hh:mm – hh:mm
+      const horario = this._formatHorario(
+        d.HoraInicioExtraProgramada || d.HoraInicioExtra,
+        d.HoraFinExtra
+      );
+
       return `
-        <div class="porteria-card" style="position:relative">
+        <div class="porteria-card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem">
             <div>
               <div style="font-weight:700;font-size:.95rem">${d.ApellidoNombre || '–'}</div>
@@ -141,20 +192,20 @@ const Porteria = {
 
           <div style="font-size:.8rem;color:var(--c-gray-600);margin-bottom:.6rem">
             <strong>N° Sol.:</strong> ${d.NumeroSolicitud || '–'} &nbsp;·&nbsp;
-            <strong>Horario:</strong> ${d.HoraInicioExtraProgramada || '–'} &nbsp;·&nbsp;
+            <strong>Horario:</strong> <span style="font-family:var(--font-mono);font-weight:600">${horario}</span> &nbsp;·&nbsp;
             <strong>Área:</strong> ${d.AreaExtraID || '–'}
           </div>
 
           ${ingresado
             ? `<div style="font-size:.82rem;color:var(--c-success);font-weight:600">
-                ✓ Hora real: ${d.HoraIngresoReal || 'no registrada'}
+                ✓ Hora real: <span style="font-family:var(--font-mono)">${this._formatHorario(d.HoraIngresoReal, null).replace(' – –', '')}</span>
                 ${d.DiferenciaMinutos ? ` (${d.DiferenciaMinutos > 0 ? '+' : ''}${d.DiferenciaMinutos} min)` : ''}
                 ${d.UsuarioRegistro ? `· Reg. por: ${d.UsuarioRegistro}` : ''}
               </div>`
             : canReg
               ? `<div style="display:flex;gap:.5rem;align-items:center;margin-top:.5rem">
                   <input type="time" id="hIng_${d.ID}"
-                    style="flex:1;padding:.4rem .6rem;border:1.5px solid var(--c-gray-200);border-radius:var(--radius-sm);font-size:.85rem" />
+                    style="flex:1;padding:.4rem .6rem;border:1.5px solid var(--c-gray-200);border-radius:var(--radius-sm);font-size:.85rem;font-family:var(--font-mono)" />
                   <button class="btn btn-success btn-sm" onclick="Porteria._registrar('${d.ID}','${d.SolicitudID}')">
                     ✓ Registrar
                   </button>
@@ -171,8 +222,14 @@ const Porteria = {
     const horaEl  = document.getElementById(`hIng_${controlId}`);
     const horaIng = horaEl?.value || '';
 
+    if (!horaIng) {
+      UI.warning('Ingresá la hora de ingreso antes de registrar.');
+      return;
+    }
+
     const res = await API.registrarIngreso({
-      controlId, solicitudId,
+      controlId,
+      solicitudId,
       horaIngreso:     horaIng,
       registroIngreso: 'SI',
     });
