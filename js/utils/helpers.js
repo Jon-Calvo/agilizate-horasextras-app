@@ -35,6 +35,18 @@ const Helpers = {
     } catch { return dateStr; }
   },
 
+  // Formatea una hora 'HH:MM:SS' o 'HH:MM' → 'HH:MM'
+  formatHHMM(timeStr) {
+    if (!timeStr) return '–';
+    const s = String(timeStr).trim();
+    // Si ya viene en formato HH:MM o HH:MM:SS
+    const match = s.match(/^(\d{1,2}):(\d{2})/);
+    if (match) {
+      return match[1].padStart(2, '0') + ':' + match[2];
+    }
+    return s;
+  },
+
   today() {
     return new Date().toISOString().split('T')[0];
   },
