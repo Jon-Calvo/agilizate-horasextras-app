@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // ⚠️ REEMPLAZÁ ESTA URL con la URL de tu Google Apps Script desplegado
-  API_URL: 'https://script.google.com/macros/s/AKfycbxqHswOY1aTZ3IsCrR9NZwWDhK9ynNPmCi3Ulgl-QnyHOfWTA7mpQdoA2IDdOOHXfYg/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwGaGdxy8bZRaxl7jE7UmrYQAW_VNB6SHyb-LNNx81G0oCObiN2QRhD3oAjXffcKRRJ/exec',
 
   STORAGE_KEYS: {
     TOKEN:    'agi_token',
