@@ -1,33 +1,27 @@
 /* ============================================================
-   AGILIZATE – Módulo Portería  [CORREGIDO v1.2]
-   ============================================================
-   FIXES:
-   5a) Horario en formato hh:mm (en lugar de solo la hora inicio)
-   5b) Filtro por fecha — por defecto hoy, pero editable
+   AGILIZATE – Módulo Portería  [v1.2 – Mejoras completas]
    ============================================================ */
 
 const Porteria = {
-  _data:       [],
-  _fechaActual: null,   // fecha seleccionada en el filtro
+  _data:        [],   // todos los registros crudos (ya filtrados por fecha en backend)
+  _fechaActual: '',
 
   async render() {
     const content = document.getElementById('appContent');
     if (!content) return;
 
-    // Por defecto: hoy
-    if (!this._fechaActual) this._fechaActual = Helpers.today();
+    this._fechaActual = Helpers.today();
 
     content.innerHTML = `
       <div class="section-header">
         <div>
           <h2 class="section-title">Control de Portería</h2>
-          <p class="section-subtitle" id="porteriaSubtitle">Cargando…</p>
+          <p class="section-subtitle" id="porSubtitle">Colaboradores con horas extras aprobadas</p>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="Porteria._cargar()">↻ Actualizar</button>
       </div>
 
       <div class="filter-bar">
-        <!-- FIX 5b: filtro por fecha -->
         <div class="form-group">
           <label>Fecha</label>
           <input type="date" id="pFecha" value="${this._fechaActual}"
@@ -63,40 +57,36 @@ const Porteria = {
   },
 
   _onFechaChange() {
-    const val = document.getElementById('pFecha')?.value;
-    if (val) {
-      this._fechaActual = val;
-      this._cargar();
-    }
+    this._fechaActual = document.getElementById('pFecha')?.value || Helpers.today();
+    this._cargar();
   },
 
   async _cargar() {
-    try {
-      // FIX 5b: pasamos la fecha seleccionada al backend
-      const res  = await API.getAprobadsHoy({ fecha: this._fechaActual });
-      this._data = res?.data || [];
+    const fechaSel = document.getElementById('pFecha')?.value || this._fechaActual;
+    this._fechaActual = fechaSel;
 
-      // Actualizar subtítulo con la fecha seleccionada
-      const sub = document.getElementById('porteriaSubtitle');
-      if (sub) {
-        const eHoy = this._fechaActual === Helpers.today();
-        sub.textContent = eHoy
-          ? `Horas extras aprobadas para hoy — ${Helpers.formatDate(this._fechaActual)}`
-          : `Horas extras aprobadas para el ${Helpers.formatDate(this._fechaActual)}`;
-      }
+    // Actualizar subtítulo
+    const sub = document.getElementById('porSubtitle');
+    if (sub) sub.textContent = `Colaboradores aprobados para el ${Helpers.formatDate(fechaSel)}`;
+
+    try {
+      const res  = await API.call('getAprobadsHoy', { fecha: fechaSel });
+      // Solo mostrar los que tienen StatusColaborador === APROBADO
+      const data = (res?.data || []).filter(d =>
+        d.StatusColaborador === 'APROBADO' || d.StatusColaborador === 'APROBADA'
+      );
+      this._data = data;
 
       // Cargar áreas en el filtro
-      const areas = [...new Set(this._data.map(d => d.AreaExtraID).filter(Boolean))];
+      const areas = [...new Set(data.map(d => d.AreaExtraID).filter(Boolean))];
       const sel   = document.getElementById('pArea');
-      if (sel) {
-        const prevArea = sel.value;
-        sel.innerHTML  = `<option value="">Todas las áreas</option>` +
-          areas.map(a => `<option value="${a}" ${a === prevArea ? 'selected' : ''}>${a}</option>`).join('');
+      if (sel && areas.length) {
+        sel.innerHTML = `<option value="">Todas las áreas</option>` +
+          areas.map(a => `<option value="${a}">${a}</option>`).join('');
       }
 
-      this._renderStats(this._data);
+      this._renderStats(data);
       this._filtrar();
-
     } catch (err) {
       const el = document.getElementById('porteriaContent');
       if (el) el.innerHTML = `<div class="empty-state"><h4>Error al cargar</h4><p>${err.message}</p></div>`;
@@ -109,17 +99,16 @@ const Porteria = {
     const total      = data.length;
     const ingresados = data.filter(d => d.RegistroIngreso === 'SI').length;
     const pendientes = total - ingresados;
-
     el.innerHTML = `
-      <div class="stat-card" style="flex:1;min-width:150px">
-        <div class="stat-label">Total del día</div>
+      <div class="stat-card" style="flex:1;min-width:140px">
+        <div class="stat-label">Aprobados del día</div>
         <div class="stat-value">${total}</div>
       </div>
-      <div class="stat-card" style="flex:1;min-width:150px">
+      <div class="stat-card" style="flex:1;min-width:140px">
         <div class="stat-label">Ingresaron</div>
         <div class="stat-value" style="color:var(--c-success)">${ingresados}</div>
       </div>
-      <div class="stat-card" style="flex:1;min-width:150px">
+      <div class="stat-card" style="flex:1;min-width:140px">
         <div class="stat-label">Pendientes</div>
         <div class="stat-value" style="color:var(--c-warning)">${pendientes}</div>
       </div>`;
@@ -127,9 +116,10 @@ const Porteria = {
 
   _filtrar() {
     const search  = (document.getElementById('pSearch')?.value  || '').toLowerCase();
-    const area    = document.getElementById('pArea')?.value     || '';
-    const ingreso = document.getElementById('pIngreso')?.value  || '';
+    const area    =  document.getElementById('pArea')?.value    || '';
+    const ingreso =  document.getElementById('pIngreso')?.value || '';
 
+    // SIEMPRE solo APROBADO (ya filtrado en _cargar, re-filtramos por seguridad)
     const filtered = this._data.filter(d => {
       const matchS = !search  || (d.ApellidoNombre || '').toLowerCase().includes(search) || String(d.Legajo).includes(search);
       const matchA = !area    || d.AreaExtraID === area;
@@ -137,18 +127,8 @@ const Porteria = {
       return matchS && matchA && matchI;
     });
 
+    this._renderStats(filtered);
     this._renderCards(filtered);
-  },
-
-  // FIX 5a: formatear horario como hh:mm – hh:mm
-  _formatHorario(horaInicio, horaFin) {
-    const fmt = (h) => {
-      if (!h) return '–';
-      // Si ya viene como "HH:mm" o "HH:mm:ss", tomar solo los primeros 5 chars
-      const s = String(h).trim();
-      return s.length >= 5 ? s.substring(0, 5) : s;
-    };
-    return `${fmt(horaInicio)} – ${fmt(horaFin)}`;
   },
 
   _renderCards(data) {
@@ -160,7 +140,7 @@ const Porteria = {
         <div class="card" style="padding:3rem;text-align:center">
           <div style="font-size:2.5rem;margin-bottom:.75rem">🏠</div>
           <h4>Sin colaboradores para mostrar</h4>
-          <p style="color:var(--c-gray-500)">No hay horas extras aprobadas para esta fecha o no coinciden con los filtros.</p>
+          <p style="color:var(--c-gray-500)">No hay horas extras aprobadas que coincidan con los filtros.</p>
         </div>`;
       return;
     }
@@ -169,15 +149,8 @@ const Porteria = {
 
     const cards = data.map(d => {
       const ingresado = d.RegistroIngreso === 'SI';
-
-      // FIX 5a: horario completo en hh:mm – hh:mm
-      const horario = this._formatHorario(
-        d.HoraInicioExtraProgramada || d.HoraInicioExtra,
-        d.HoraFinExtra
-      );
-
       return `
-        <div class="porteria-card">
+        <div class="porteria-card" style="position:relative">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem">
             <div>
               <div style="font-weight:700;font-size:.95rem">${d.ApellidoNombre || '–'}</div>
@@ -192,20 +165,20 @@ const Porteria = {
 
           <div style="font-size:.8rem;color:var(--c-gray-600);margin-bottom:.6rem">
             <strong>N° Sol.:</strong> ${d.NumeroSolicitud || '–'} &nbsp;·&nbsp;
-            <strong>Horario:</strong> <span style="font-family:var(--font-mono);font-weight:600">${horario}</span> &nbsp;·&nbsp;
+            <strong>Horario:</strong> ${Helpers.formatHHMM(d.HoraInicioExtraProgramada) || '–'} &nbsp;·&nbsp;
             <strong>Área:</strong> ${d.AreaExtraID || '–'}
           </div>
 
           ${ingresado
             ? `<div style="font-size:.82rem;color:var(--c-success);font-weight:600">
-                ✓ Hora real: <span style="font-family:var(--font-mono)">${this._formatHorario(d.HoraIngresoReal, null).replace(' – –', '')}</span>
+                ✓ Hora real: ${d.HoraIngresoReal || 'no registrada'}
                 ${d.DiferenciaMinutos ? ` (${d.DiferenciaMinutos > 0 ? '+' : ''}${d.DiferenciaMinutos} min)` : ''}
                 ${d.UsuarioRegistro ? `· Reg. por: ${d.UsuarioRegistro}` : ''}
               </div>`
             : canReg
               ? `<div style="display:flex;gap:.5rem;align-items:center;margin-top:.5rem">
                   <input type="time" id="hIng_${d.ID}"
-                    style="flex:1;padding:.4rem .6rem;border:1.5px solid var(--c-gray-200);border-radius:var(--radius-sm);font-size:.85rem;font-family:var(--font-mono)" />
+                    style="flex:1;padding:.4rem .6rem;border:1.5px solid var(--c-gray-200);border-radius:var(--radius-sm);font-size:.85rem" />
                   <button class="btn btn-success btn-sm" onclick="Porteria._registrar('${d.ID}','${d.SolicitudID}')">
                     ✓ Registrar
                   </button>
@@ -221,15 +194,10 @@ const Porteria = {
   async _registrar(controlId, solicitudId) {
     const horaEl  = document.getElementById(`hIng_${controlId}`);
     const horaIng = horaEl?.value || '';
-
-    if (!horaIng) {
-      UI.warning('Ingresá la hora de ingreso antes de registrar.');
-      return;
-    }
+    if (!horaIng) { UI.warning('Ingresá la hora de ingreso.'); return; }
 
     const res = await API.registrarIngreso({
-      controlId,
-      solicitudId,
+      controlId, solicitudId,
       horaIngreso:     horaIng,
       registroIngreso: 'SI',
     });
@@ -239,3 +207,4 @@ const Porteria = {
     this._cargar();
   },
 };
+
